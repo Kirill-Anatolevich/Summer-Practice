@@ -142,10 +142,28 @@ def game_over(snake, apple):
 
 pause_flag = True
 
+def new_game():
+    global snake
+    global apple
+    global game_time
+    global score
+    global dirs
+    dirs = {'W': True, 'S': True, 'A': True, 'D': True}
+    snake.length = 1
+    snake.x = 330
+    snake.y = 330
+    apple.newCords()
+    game_time = time.time()
+    score = 0
+    game()
 
+deltime = 0
 def pause():
+    global pause_time
     global pause_flag
+    global deltime
     pause_flag = True
+    pause_time = time.time()
 
     def change():
         global pause_flag
@@ -153,10 +171,10 @@ def pause():
 
     btn_return = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128), action=change)
     btn_new_game = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
-                        action=game)
+                        action=new_game)
     while pause_flag:
         btn_return.draw(sc, xbtn=300, ybtn=310, xtxt=60, ytxt=2, text="RETURN")
-        btn_return.draw(sc, xbtn=300, ybtn=370, xtxt=40, ytxt=2, text="NEW GAME")
+        btn_new_game.draw(sc, xbtn=300, ybtn=370, xtxt=40, ytxt=2, text="NEW GAME")
         print_text(sc, "PAUSE", 200, 150, font_color=(255, 140, 0), font_size=150)
         pg.draw.rect(sc, (80, 0, 3), (810, 0, 300, 810))
         print_text(sc, "SCORE:" + str(score), 820, 30, font_color=(255, 140, 0), font_size=40)
@@ -165,16 +183,25 @@ def pause():
 
         close_window()
         pg.display.flip()
+    deltime = time.time() - pause_time
+    print(deltime)
 
 def display():
     global game_time
     global  current_time
+    global deltime
     current_time = time.time()
     pg.draw.rect(sc, (80, 0, 3), (810, 0, 300, 810))
     btn_pause = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128), action=pause)
     btn_pause.draw(sc, xbtn=840, ybtn=300, xtxt=65, ytxt=2, text="PAUSE")
     print_text(sc, "SCORE:" + str(score), 820, 30, font_color=(255, 140, 0), font_size=40)
-    print_text(sc, "TIME:" + time.strftime("%X", time.gmtime(current_time - game_time)), 820, 70,
+    game_time += deltime
+    if deltime != 0:
+        timegame = current_time - deltime
+        deltime = 0
+    else:
+        timegame = current_time - game_time
+    print_text(sc, "TIME:" + time.strftime("%X", time.gmtime(timegame)), 820, 70,
                font_color=(255, 140, 0), font_size=40)
 
 
