@@ -14,6 +14,8 @@ SIZE = 30
 score = 0
 
 
+
+
 def print_text(scene, message, x, y, font_color=(30, 0, 0), font_type='Kingthings_Petrock.ttf', font_size=30):
     font_type = pygame.font.Font(font_type, font_size)
     text = font_type.render(message, True, font_color)
@@ -70,7 +72,7 @@ class Snake:
         self.size = 30
 
     def draw(self):
-        [(pg.draw.rect(self.surface, (20, 209, 0), (i, j, self.size - 1, self.size - 1))) for i, j in self.snake]
+        [(pg.draw.rect(self.surface, (31, 174, 233), (i, j, self.size - 1, self.size - 1))) for i, j in self.snake]
         self.x += self.dx * self.size
         self.y += self.dy * self.size
         self.snake.append((self.x, self.y))
@@ -103,6 +105,8 @@ class Apple:
 
 sc = pg.display.set_mode((WIDTH + 300, HEIGHT))
 pg.display.set_caption("Snake")
+background_game = pg.image.load('img.jpg').convert()
+background_menu = pg.image.load('snake.jpg').convert()
 
 clock = pg.time.Clock()
 FPS = 10
@@ -126,14 +130,23 @@ def eat_apple(snake, apple):
 
 font_end = pygame.font.SysFont('Arial', 66, bold=True)
 
+def exit_game():
+    exit()
+
 
 def game_over(snake, apple):
-    RES = 810
+    duration_of_the_game = time.time() - game_time
+    print(duration_of_the_game)
+    btn_new_game = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                          action=new_game)
+    btn_exit = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                          action=exit_game)
     if len(snake.snake) != len(
             set(snake.snake)) or snake.x > WIDTH - SIZE or snake.x < 0 or snake.y > HEIGHT - SIZE or snake.y < 0:
         while True:
-            render_end = font_end.render('GAME OVER', 1, pygame.Color('orange'))
-            sc.blit(render_end, (RES // 2 - 200, RES // 3))
+            btn_new_game.draw(sc, xbtn=300, ybtn=370, xtxt=40, ytxt=2, text="NEW GAME")
+            btn_exit.draw(sc, xbtn=300, ybtn=480, xtxt=80, ytxt=2, text="EXIT")
+            print_text(sc, "GAME OVER", 80, 150, font_color=(255, 140, 0), font_size=150)
             pygame.display.flip()
             for evetn in pygame.event.get():
                 if evetn.type == pygame.QUIT:
@@ -222,10 +235,14 @@ def close_window():
 
 
 def start_menu():
+    sc.blit(background_menu, (-100, 0))
     btn_start_game = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                             action=start_game)
+    btn_exit = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                      action=exit_game)
     while True:
         btn_start_game.draw(sc, xbtn=450, ybtn=350, xtxt=65, ytxt=2, text="START")
+        btn_exit.draw(sc, xbtn=450, ybtn=440, xtxt=80, ytxt=2, text="EXIT")
         pg.display.flip()
         clock.tick(FPS)
         close_window()
@@ -236,7 +253,7 @@ def game():
     game_time = time.time()
     global dirs
     while True:
-        sc.fill('BLACK')
+        sc.blit(background_game, (0, 0))
         snake.draw()
         display()
         apple.draw()
