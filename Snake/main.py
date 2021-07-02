@@ -1,5 +1,6 @@
 import random
 import time
+import shelve
 
 import pygame
 import pygame as pg
@@ -14,6 +15,22 @@ SIZE = 30
 score = 0
 
 
+class SaveData:
+
+    def __init__(self):
+        self.data = shelve.open('data')
+        self.data_list = self.data['score']
+
+    def save(self, score):
+        self.score = score
+        self.data_list.append(self.score)
+        self.data['score'] = self.data_list
+
+    def get(self):
+        return self.data['score']
+
+    def __del__(self):
+        self.data.close()
 
 
 def print_text(scene, message, x, y, font_color=(30, 0, 0), font_type='Kingthings_Petrock.ttf', font_size=30):
@@ -61,18 +78,43 @@ class Button:
 class Snake:
 
     def __init__(self, surface, speed):
-        self.length = 1
+        self.length = 2
         self.speed = speed
+        self.size = 30
         self.surface = surface
         self.x = 360
         self.y = 360
-        self.snake = [(self.x, self.y)]
+        self.snake = [(self.x, self.y), (self.x - self.size, self.y - self.size)]
         self.dx = 0
-        self.dy = 0
-        self.size = 30
+        self.dy = -1
+
 
     def draw(self):
-        [(pg.draw.rect(self.surface, (31, 174, 233), (i, j, self.size - 1, self.size - 1))) for i, j in self.snake]
+        if self.dy == -1:
+            x, y = self.snake[len(self.snake) - 1]
+            sc.blit(snake_head_up, (x - 6, y - 15))
+            for i in range(len(self.snake) - 1):
+                x, y = self.snake[i]
+                sc.blit(snake_body, (x, y))
+        elif self.dy == 1:
+            x, y = self.snake[len(self.snake) - 1]
+            sc.blit(snake_head_down, (x - 14, y - 6))
+            for i in range(len(self.snake) - 1):
+                x, y = self.snake[i]
+                sc.blit(snake_body, (x, y))
+        elif self.dx == 1:
+            x, y = self.snake[len(self.snake) - 1]
+            sc.blit(snake_head_right, (x - 5, y - 5))
+            for i in range(len(self.snake) - 1):
+                x, y = self.snake[i]
+                sc.blit(snake_body, (x, y))
+        elif self.dx == -1:
+            x, y = self.snake[len(self.snake) - 1]
+            sc.blit(snake_head_left, (x - 15, y - 15))
+            for i in range(len(self.snake) - 1):
+                x, y = self.snake[i]
+                sc.blit(snake_body, (x, y))
+
         self.x += self.dx * self.size
         self.y += self.dy * self.size
         self.snake.append((self.x, self.y))
@@ -95,9 +137,9 @@ class Apple:
         self.time = 210
 
     def draw(self):
-        pg.draw.rect(self.surface, (255, 0, 0), (self.x, self.y, self.size, self.size))
+        sc.blit(apple_img, (self.x, self.y))
         pg.draw.rect(self.surface, (0, 0, 0), (820 - 2, 720 - 2, 210 + 4, 20 + 4), 2)
-        pg.draw.rect(self.surface, (255, 0, 0), (820, 720, self.time, 20))
+        pg.draw.rect(self.surface, (0, 128, 0), (820, 720, self.time, 20))
         self.time -= 2
         if self.time < 0:
             self.newCords()
@@ -107,6 +149,13 @@ sc = pg.display.set_mode((WIDTH + 300, HEIGHT))
 pg.display.set_caption("Snake")
 background_game = pg.image.load('img.jpg').convert()
 background_menu = pg.image.load('snake.jpg').convert()
+apple_img = pg.image.load('apple.png').convert()
+snake_head_up = pg.image.load('snake_head_up.png')
+snake_head_right = pg.image.load('snake_head_right.png')
+snake_head_down = pg.image.load('snake_head_down.png')
+snake_head_left = pg.image.load('snake_head_left.png')
+snake_body = pg.image.load('snake_body.png')
+
 
 clock = pg.time.Clock()
 FPS = 10
@@ -136,16 +185,20 @@ def exit_game():
 
 def game_over(snake, apple):
     duration_of_the_game = time.time() - game_time
-    print(duration_of_the_game)
     btn_new_game = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                           action=new_game)
     btn_exit = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                           action=exit_game)
+    btn_start_menu = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                            action=start_menu)
     if len(snake.snake) != len(
             set(snake.snake)) or snake.x > WIDTH - SIZE or snake.x < 0 or snake.y > HEIGHT - SIZE or snake.y < 0:
+        save_data.save(score)
+        save_data.get()
         while True:
+            btn_start_menu.draw(sc, xbtn=300, ybtn=480, xtxt=33, ytxt=5, text="MAIN MENU")
             btn_new_game.draw(sc, xbtn=300, ybtn=370, xtxt=40, ytxt=2, text="NEW GAME")
-            btn_exit.draw(sc, xbtn=300, ybtn=480, xtxt=80, ytxt=2, text="EXIT")
+            btn_exit.draw(sc, xbtn=300, ybtn=600, xtxt=80, ytxt=2, text="EXIT")
             print_text(sc, "GAME OVER", 80, 150, font_color=(255, 140, 0), font_size=150)
             pygame.display.flip()
             for evetn in pygame.event.get():
@@ -161,8 +214,10 @@ def new_game():
     global game_time
     global score
     global dirs
+    global FPS
+    FPS = 10
     dirs = {'W': True, 'S': True, 'A': True, 'D': True}
-    snake.length = 1
+    snake.length = 2
     snake.x = 330
     snake.y = 330
     apple.newCords()
@@ -185,10 +240,13 @@ def pause():
     btn_return = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128), action=change)
     btn_new_game = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                         action=new_game)
+    btn_start_menu = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                            action=start_menu)
     while pause_flag:
+        btn_start_menu.draw(sc, xbtn=300, ybtn=600, xtxt=33, ytxt=5, text="MAIN MENU")
         btn_return.draw(sc, xbtn=300, ybtn=310, xtxt=60, ytxt=2, text="RETURN")
         btn_new_game.draw(sc, xbtn=300, ybtn=370, xtxt=40, ytxt=2, text="NEW GAME")
-        print_text(sc, "PAUSE", 200, 150, font_color=(255, 140, 0), font_size=150)
+        print_text(sc, "PAUSE", 220, 150, font_color=(255, 140, 0), font_size=150)
         pg.draw.rect(sc, (80, 0, 3), (810, 0, 300, 810))
         print_text(sc, "SCORE:" + str(score), 820, 30, font_color=(255, 140, 0), font_size=40)
         print_text(sc, "TIME:" + time.strftime("%X", time.gmtime(current_time - game_time)), 820, 70,
@@ -197,7 +255,6 @@ def pause():
         close_window()
         pg.display.flip()
     deltime = time.time() - pause_time
-    print(deltime)
 
 def display():
     global game_time
@@ -233,6 +290,26 @@ def close_window():
         if event.type == pg.QUIT:
             exit()
 
+def show_records():
+    sc.blit(background_menu, (-100, 0))
+    data = save_data.get()
+    data.sort(reverse = True)
+    btn_exit = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                      action=exit_game)
+    btn_start_menu = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                        action=start_menu)
+    print_text(sc, "MAX SCORE:", 330, 10, font_color=(255, 255, 255), font_size=100)
+    while True:
+        btn_start_menu.draw(sc, xbtn=450, ybtn=620, xtxt=33, ytxt=5, text="MAIN MENU")
+        btn_exit.draw(sc, xbtn=450, ybtn=700, xtxt=80, ytxt=5, text="EXIT")
+        for i in range(len(data)):
+            if i == 7:
+                break
+            print_text(sc, str(1+i) + '. ' + str(data[i]), 500, 100 + 70*i, font_color=(255, 255, 255), font_size=70)
+        close_window()
+        clock.tick(FPS)
+        pg.display.flip()
+
 
 def start_menu():
     sc.blit(background_menu, (-100, 0))
@@ -240,9 +317,12 @@ def start_menu():
                             action=start_game)
     btn_exit = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                       action=exit_game)
+    btn_record = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
+                      action=show_records)
     while True:
-        btn_start_game.draw(sc, xbtn=450, ybtn=350, xtxt=65, ytxt=2, text="START")
-        btn_exit.draw(sc, xbtn=450, ybtn=440, xtxt=80, ytxt=2, text="EXIT")
+        btn_start_game.draw(sc, xbtn=450, ybtn=350, xtxt=65, ytxt=5, text="START")
+        btn_exit.draw(sc, xbtn=450, ybtn=500, xtxt=80, ytxt=5, text="EXIT")
+        btn_record.draw(sc, xbtn=450, ybtn=425, xtxt=33, ytxt=5, text="MY RECORDS")
         pg.display.flip()
         clock.tick(FPS)
         close_window()
@@ -282,4 +362,5 @@ def game():
 
 
 while True:
+    save_data = SaveData()
     start_menu()
