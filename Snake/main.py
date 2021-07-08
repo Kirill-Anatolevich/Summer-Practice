@@ -1,6 +1,6 @@
 import random
 import time
-import shelve
+import sqlite
 
 import pygame
 import pygame as pg
@@ -13,24 +13,6 @@ HEIGHT = 810
 SIZE = 30
 
 score = 0
-
-
-class SaveData:
-
-    def __init__(self):
-        self.data = shelve.open('data')
-        self.data_list = self.data['score']
-
-    def save(self, score):
-        self.score = score
-        self.data_list.append(self.score)
-        self.data['score'] = self.data_list
-
-    def get(self):
-        return self.data['score']
-
-    def __del__(self):
-        self.data.close()
 
 
 def print_text(scene, message, x, y, font_color=(30, 0, 0), font_type='Kingthings_Petrock.ttf', font_size=30):
@@ -48,7 +30,6 @@ class Button:
         self.active_color = active_color
         self.button_sound = pygame.mixer.Sound('click.wav')
         self.action = action
-
 
     def draw(self, scene, xbtn, ybtn, xtxt, ytxt, text):
         mouse = pygame.mouse.get_pos()
@@ -87,7 +68,6 @@ class Snake:
         self.snake = [(self.x, self.y), (self.x - self.size, self.y - self.size)]
         self.dx = 0
         self.dy = -1
-
 
     def draw(self):
         if self.dy == -1:
@@ -159,6 +139,8 @@ snake_body = pg.image.load('snake_body.png')
 
 clock = pg.time.Clock()
 FPS = 10
+deltime = 0
+pause_flag = True
 
 dirs = {'W': True, 'S': True, 'A': True, 'D': True}
 
@@ -193,10 +175,9 @@ def game_over(snake, apple):
                             action=start_menu)
     if len(snake.snake) != len(
             set(snake.snake)) or snake.x > WIDTH - SIZE or snake.x < 0 or snake.y > HEIGHT - SIZE or snake.y < 0:
-        save_data.save(score)
-        save_data.get()
+        data_base.add_result(score, int(duration_of_the_game))
         while True:
-            btn_start_menu.draw(sc, xbtn=300, ybtn=480, xtxt=33, ytxt=5, text="MAIN MENU")
+            btn_start_menu.draw(sc, xbtn=300, ybtn=450, xtxt=33, ytxt=5, text="MAIN MENU")
             btn_new_game.draw(sc, xbtn=300, ybtn=370, xtxt=40, ytxt=2, text="NEW GAME")
             btn_exit.draw(sc, xbtn=300, ybtn=600, xtxt=80, ytxt=2, text="EXIT")
             print_text(sc, "GAME OVER", 80, 150, font_color=(255, 140, 0), font_size=150)
@@ -206,7 +187,6 @@ def game_over(snake, apple):
                     exit()
 
 
-pause_flag = True
 
 def new_game():
     global snake
@@ -225,7 +205,8 @@ def new_game():
     score = 0
     game()
 
-deltime = 0
+
+
 def pause():
     global pause_time
     global pause_flag
@@ -256,9 +237,10 @@ def pause():
         pg.display.flip()
     deltime = time.time() - pause_time
 
+
 def display():
     global game_time
-    global  current_time
+    global current_time
     global deltime
     current_time = time.time()
     pg.draw.rect(sc, (80, 0, 3), (810, 0, 300, 810))
@@ -290,22 +272,26 @@ def close_window():
         if event.type == pg.QUIT:
             exit()
 
+
 def show_records():
     sc.blit(background_menu, (-100, 0))
-    data = save_data.get()
-    data.sort(reverse = True)
+    base = data_base.get_result()
     btn_exit = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                       action=exit_game)
     btn_start_menu = Button(width=199, height=50, inactive_color=(192, 192, 192), active_color=(128, 128, 128),
                         action=start_menu)
-    print_text(sc, "MAX SCORE:", 330, 10, font_color=(255, 255, 255), font_size=100)
+    print_text(sc, "POSITION:", 0, 10, font_color=(255, 255, 255), font_size=30)
+    print_text(sc, "ID GAME:", 150, 10, font_color=(255, 255, 255), font_size=30)
+    print_text(sc, "SCORE:", 400, 10, font_color=(255, 255, 255), font_size=30)
+    print_text(sc, "TIME:", 650, 10, font_color=(255, 255, 255), font_size=30)
     while True:
         btn_start_menu.draw(sc, xbtn=450, ybtn=620, xtxt=33, ytxt=5, text="MAIN MENU")
         btn_exit.draw(sc, xbtn=450, ybtn=700, xtxt=80, ytxt=5, text="EXIT")
-        for i in range(len(data)):
+        for i in range(len(base)):
             if i == 7:
                 break
-            print_text(sc, str(1+i) + '. ' + str(data[i]), 500, 100 + 70*i, font_color=(255, 255, 255), font_size=70)
+            print_text(sc, str(1+i)+ 10*" " + str(base[i][0]) + 15*" " + str(base[i][1]) + 15*" " + str(base[i][2]), 20,
+                       100 + 70*i, font_color=(255, 255, 255), font_size=70)
         close_window()
         clock.tick(FPS)
         pg.display.flip()
@@ -339,7 +325,6 @@ def game():
         apple.draw()
         eat_apple(snake, apple)
         game_over(snake, apple)
-        # render_score = font_score.render(f'SCORE: {score}', 1, pygame.Color('orange'))
 
         pg.display.flip()
         clock.tick(FPS)
@@ -362,5 +347,5 @@ def game():
 
 
 while True:
-    save_data = SaveData()
+    data_base = sqlite.SQLiter('data_base.db')
     start_menu()
